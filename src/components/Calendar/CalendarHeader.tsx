@@ -1,56 +1,47 @@
 import React from 'react';
-import { Button } from '../Shared';
 
 interface CalendarHeaderProps {
-  onViewChange: (view: 'month' | 'week' | 'day') => void;
-  currentView: 'month' | 'week' | 'day';
-  onNewEvent: () => void;
+  year: number;
+  month: number;
+  monthLabel: string;
+  onPrevMonth: () => void;
+  onNextMonth: () => void;
+  onToday: () => void;
 }
 
 export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
-  onViewChange,
-  currentView,
-  onNewEvent
+  year,
+  month,
+  monthLabel,
+  onPrevMonth,
+  onNextMonth,
+  onToday
 }) => {
   return (
-    <div className="calendar-header-container">
-      <div className="calendar-header-section">
-        <h1 className="calendar-title">تقویم فارسی</h1>
+    <div className="calendar-header flex items-center justify-between p-4 bg-white border-b">
+      <div className="flex items-center space-x-2">
+        <button
+          onClick={onPrevMonth}
+          className="px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded"
+        >
+          قبلی
+        </button>
+        <button
+          onClick={onNextMonth}
+          className="px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded"
+        >
+          بعدی
+        </button>
+        <button
+          onClick={onToday}
+          className="px-3 py-2 text-sm bg-blue-600 text-white hover:bg-blue-700 rounded"
+        >
+          امروز
+        </button>
       </div>
       
-      <div className="calendar-header-section calendar-view-switcher">
-        <Button
-          variant={currentView === 'month' ? 'primary' : 'outline'}
-          size="small"
-          onClick={() => onViewChange('month')}
-        >
-          ماه
-        </Button>
-        <Button
-          variant={currentView === 'week' ? 'primary' : 'outline'}
-          size="small"
-          onClick={() => onViewChange('week')}
-        >
-          هفته
-        </Button>
-        <Button
-          variant={currentView === 'day' ? 'primary' : 'outline'}
-          size="small"
-          onClick={() => onViewChange('day')}
-        >
-          روز
-        </Button>
-      </div>
-      
-      <div className="calendar-header-section">
-        <Button
-          variant="success"
-          size="medium"
-          icon="➕"
-          onClick={onNewEvent}
-        >
-          رویداد جدید
-        </Button>
+      <div className="text-lg font-semibold">
+        {monthLabel} {year}
       </div>
     </div>
   );

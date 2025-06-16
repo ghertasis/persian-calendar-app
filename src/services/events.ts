@@ -1,71 +1,52 @@
-import { Event, EventFormData } from '../types';
+import { Event } from '../types';
 
-export class EventsService {
-  private static STORAGE_KEY = 'persian-calendar-events';
+const EVENTS_STORAGE_KEY = 'calendar_events';
 
-  static getEvents(): Event[] {
-    if (typeof window === 'undefined') return [];
+export const loadEvents = (): Event[] => {
+  try {
+    const stored = localStorage.getItem(EVENTS_STORAGE_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch (error) {
+    console.error('Error loading events:', error);
+    return [];
+  }
+};
+
+export const saveEvent = (event: Event): Event => {
+  try {
+    const events = loadEvents();
+    const existingIndex = events.findIndex(e => e.id === event.id);
     
-    try {
-      const stored = localStorage.getItem(this.STORAGE_KEY);
-      return stored ? JSON.parse(stored) : [];
-    } catch {
-      return [];
+    if (existingIndex >= 0) {
+      events[existingIndex] = event;
+    } else {
+      events.push(event);
     }
-  }
-
-  static saveEvents(events: Event[]): void {
-    if (typeof window === 'undefined') return;
     
-    try {
-      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(events));
-    } catch {
-      // Handle storage errors silently
-    }
+    localStorage.setItem(EVENTS_STORAGE_KEY, JSON.stringify(events));
+    return event;
+  } catch (error) {
+    console.error('Error saving event:', error);
+    throw new Error('Failed to save event');
   }
+};
 
-  static addEvent(eventData: EventFormData): Event {
-    const newEvent: Event = {
-      id: Date.now().toString(),
-      ...eventData
-    };
-
-    const events = this.getEvents();
-    events.push(newEvent);
-    this.saveEvents(events);
-
-    return newEvent;
+export const deleteEvent = (id: string): void => {
+  try {
+    const events = loadEvents();
+    const filtered = events.filter(event => event.id !== id);
+    localStorage.setItem(EVENTS_STORAGE_KEY, JSON.stringify(filtered));
+  } catch (error) {
+    console.error('Error deleting event:', error);
+    throw new Error('Failed to delete event');
   }
+};
 
-  static updateEvent(id: string, eventData: Partial<EventFormData>): Event | null {
-    const events = this.getEvents();
-    const eventIndex = events.findIndex(e => e.id === id);
-
-    if (eventIndex === -1) return null;
-
-    const updatedEvent = { ...events[eventIndex], ...eventData };
-    events[eventIndex] = updatedEvent;
-    this.saveEvents(events);
-
-    return updatedEvent;
+export const saveEvents = (events: Event[]): void => {
+  try {
+    localStorage.setItem(EVENTS_STORAGE_KEY, JSON.stringify(events));
+  } catch (error) {
+    console.error('Error saving events:', error);
+    throw new Error('Failed to save events');
   }
-
-  static deleteEvent(id: string): boolean {
-    const events = this.getEvents();
-    const filteredEvents = events.filter(e => e.id !== id);
-
-    if (filteredEvents.length === events.length) return false;
-
-    this.saveEvents(filteredEvents);
-    return true;
-  }
-
-  static getEventsForDate(year: number, month: number, day: number): Event[] {
-    const events = this.getEvents();
-    return events.filter(event => 
-      event.date.year === year &&
-      event.date.month === month &&
-      event.date.day === day
-    );
-  }
-}
+};

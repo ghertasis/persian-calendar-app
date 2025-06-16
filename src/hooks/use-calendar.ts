@@ -1,71 +1,58 @@
 import { useState, useCallback } from 'react';
-import { PersianDate, CalendarMonth, NavigationState } from '../types';
-import { generateCalendarMonth, gregorianToPersian } from '../lib';
 
-export const useCalendar = (initialDate?: PersianDate) => {
-  const today = gregorianToPersian(new Date());
-  const [currentDate, setCurrentDate] = useState<PersianDate>(
-    initialDate || today
-  );
+export interface NavigationState {
+  currentDate: Date;
+  selectedDate: Date;
+  isNavigating: boolean;
+}
 
+export const useCalendar = () => {
   const [navigationState, setNavigationState] = useState<NavigationState>({
-    isNavigating: false,
-    direction: null
+    currentDate: new Date(),
+    selectedDate: new Date(),
+    isNavigating: false
   });
 
-  const currentMonth = generateCalendarMonth(
-    currentDate.year, 
-    currentDate.month
-  );
+  const navigateToMonth = useCallback((direction: 'next' | 'previous') => {
+    setNavigationState(prev => ({
+      ...prev,
+      isNavigating: true,
+      currentDate: new Date(
+        prev.currentDate.getFullYear(),
+        prev.currentDate.getMonth() + (direction === 'next' ? 1 : -1),
+        1
+      )
+    }));
 
-  const goToNextMonth = useCallback(() => {
-    setNavigationState({ isNavigating: true, direction: 'next' });
-    
-    setCurrentDate(prev => {
-      if (prev.month === 12) {
-        return { ...prev, year: prev.year + 1, month: 1 };
-      }
-      return { ...prev, month: prev.month + 1 };
-    });
-
+    // Reset navigation state after animation
     setTimeout(() => {
-      setNavigationState({ isNavigating: false, direction: null });
+      setNavigationState(prev => ({
+        ...prev,
+        isNavigating: false
+      }));
     }, 300);
   }, []);
 
-  const goToPrevMonth = useCallback(() => {
-    setNavigationState({ isNavigating: true, direction: 'prev' });
-    
-    setCurrentDate(prev => {
-      if (prev.month === 1) {
-        return { ...prev, year: prev.year - 1, month: 12 };
-      }
-      return { ...prev, month: prev.month - 1 };
-    });
-
-    setTimeout(() => {
-      setNavigationState({ isNavigating: false, direction: null });
-    }, 300);
+  const selectDate = useCallback((date: Date) => {
+    setNavigationState(prev => ({
+      ...prev,
+      selectedDate: date
+    }));
   }, []);
 
   const goToToday = useCallback(() => {
-    setCurrentDate(today);
-    setNavigationState({ isNavigating: false, direction: null });
-  }, [today]);
-
-  const goToDate = useCallback((date: PersianDate) => {
-    setCurrentDate(date);
-    setNavigationState({ isNavigating: false, direction: null });
+    const today = new Date();
+    setNavigationState({
+      currentDate: new Date(today.getFullYear(), today.getMonth(), 1),
+      selectedDate: today,
+      isNavigating: false
+    });
   }, []);
 
   return {
-    currentDate,
-    currentMonth,
     navigationState,
-    today,
-    goToNextMonth,
-    goToPrevMonth,
-    goToToday,
-    goToDate
+    navigateToMonth,
+    selectDate,
+    goToToday
   };
 };

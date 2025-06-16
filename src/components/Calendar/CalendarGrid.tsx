@@ -1,174 +1,143 @@
 import React from 'react';
-import { Event } from '../../types';
-import { PersianCalendar } from '../../utils/PersianCalendar';
-import { CalendarDaySkeleton } from '../Shared';
+import { Event, PersianDate } from '../../types';
 
 interface CalendarGridProps {
-  year: number;
-  month: number;
+  currentDate: PersianDate;
+  selectedDate?: PersianDate;
   events: Event[];
-  selectedDate?: { year: number; month: number; day: number };
-  onDateSelect: (date: { year: number; month: number; day: number }) => void;
-  onDateDoubleClick?: (date: { year: number; month: number; day: number }) => void;
-  loading?: boolean;
-  highlightToday?: boolean;
+  onDateSelect: (date: PersianDate) => void;
 }
 
 export const CalendarGrid: React.FC<CalendarGridProps> = ({
-  year,
-  month,
-  events,
+  currentDate,
   selectedDate,
-  onDateSelect,
-  onDateDoubleClick,
-  loading = false,
-  highlightToday = true
+  events,
+  onDateSelect
 }) => {
-  const persianCalendar = new PersianCalendar();
-  
-  // Get calendar data for the month
-  const monthData = persianCalendar.getMonthData(year, month);
-  const monthName = persianCalendar.getMonthName(month);
-  const weekDays = persianCalendar.getWeekDayNames();
-  
-  // Get today's date in Persian
-  const today = persianCalendar.getCurrentDate();
-  
-  // Group events by date
-  const eventsByDate = events.reduce((acc, event) => {
-    const dateKey = `${event.date.year}-${event.date.month}-${event.date.day}`;
-    if (!acc[dateKey]) {
-      acc[dateKey] = [];
+  // Generate days for the current month
+  const generateMonthDays = () => {
+    const daysInMonth = getDaysInPersianMonth(currentDate.year, currentDate.month);
+    const days: PersianDate[] = [];
+    
+    for (let day = 1; day <= daysInMonth; day++) {
+      days.push({
+        year: currentDate.year,
+        month: currentDate.month,
+        day
+      });
     }
-    acc[dateKey].push(event);
-    return acc;
-  }, {} as Record<string, Event[]>);
-
-  // Helper function to check if a date is today
-  const isToday = (day: number) => {
-    return highlightToday && 
-           today.year === year && 
-           today.month === month && 
-           today.day === day;
+    
+    return days;
   };
 
-  // Helper function to check if a date is selected
-  const isSelected = (day: number) => {
-    return selectedDate &&
-           selectedDate.year === year &&
-           selectedDate.month === month &&
-           selectedDate.day === day;
-  };
-
-  // Helper function to get events for a specific day
-  const getDayEvents = (day: number) => {
-    const dateKey = `${year}-${month}-${day}`;
-    return eventsByDate[dateKey] || [];
-  };
-
-  // Handle date click
-  const handleDateClick = (day: number) => {
-    onDateSelect({ year, month, day });
-  };
-
-  // Handle date double click
-  const handleDateDoubleClick = (day: number) => {
-    if (onDateDoubleClick) {
-      onDateDoubleClick({ year, month, day });
+  const getDaysInPersianMonth = (year: number, month: number): number => {
+    if (month <= 6) {
+      return 31;
+    } else if (month <= 11) {
+      return 30;
+    } else {
+      // Check if it's a leap year for the last month (اسفند)
+      return isLeapPersianYear(year) ? 30 : 29;
     }
   };
 
-  if (loading) {
-    return (
-      <div className="calendar-grid-container">
-        <div className="calendar-header">
-          <h2 className="calendar-month-title">{monthName} {year}</h2>
-        </div>
-        <div className="calendar-grid">
-          <div className="calendar-weekdays">
-            {weekDays.map((dayName) => (
-              <div key={dayName} className="calendar-weekday">
-                {dayName}
-              </div>
-            ))}
-          </div>
-          <div className="calendar-days">
-            {Array.from({ length: 42 }).map((_, index) => (
-              <CalendarDaySkeleton key={index} />
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const isLeapPersianYear = (year: number): boolean => {
+    // Simple leap year calculation for Persian calendar
+    const breaks = [
+      -61, 9, 38, 199, 426, 686, 756, 818, 1111, 1181, 1210,
+      1635, 2060, 2097, 2192, 2262, 2324, 2394, 2456, 3178
+    ];
+    
+    let gy = year + 1595;
+    let leap = -14;
+    let jp = breaks[0];
+    
+    let jump = 0;
+    for (let j = 1; j < breaks.length; j++) {
+      let jm = breaks[j];
+      jump = jm - jp;
+      if (year < jm) break;
+      leap += 683 * Math.floor(jump / 2816);
+      leap += 666 * Math.floor((jump % 2816) / 2134);
+      leap += 2 * Math.floor(((jump % 2816) % 2134) / 2);
+      jp = jm;
+    }
+    
+    let n = year - jp;
+    
+    if (n < jump) {
+      leap += 683 * Math.floor(n / 2816);
+      leap += 666 * Math.floor((n % 2816) / 2134);
+      leap += 2 * Math.floor(((n % 2816) % 2134) / 2);
+      
+      if ((jump % 2816) < 682) {
+        jump = jump % 2816;
+      } else {
+        jump = jump % 2816 + 2816;
+      }
+      
+      if ((n % 2816) >= jump) {
+        leap++;
+      }
+    }
+    
+    return (leap + 4) % 4 === 0;
+  };
+
+  const getEventsForDate = (date: PersianDate) => {
+    return events.filter(event => {
+      // Assuming events have a date property or we need to match by some criteria
+      // This would need to be adapted based on your actual event structure
+      return true; // Placeholder
+    });
+  };
+
+  const isSelectedDate = (date: PersianDate) => {
+    if (!selectedDate) return false;
+    return date.year === selectedDate.year &&
+           date.month === selectedDate.month &&
+           date.day === selectedDate.day;
+  };
+
+  const monthDays = generateMonthDays();
+  const weekDays = ['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج']; // Persian week days
 
   return (
-    <div className="calendar-grid-container">
-      <div className="calendar-header">
-        <h2 className="calendar-month-title">{monthName} {year}</h2>
+    <div className="calendar-grid">
+      {/* Week day headers */}
+      <div className="grid grid-cols-7 gap-1 mb-2">
+        {weekDays.map((day, index) => (
+          <div key={index} className="p-2 text-center text-sm font-medium text-gray-600">
+            {day}
+          </div>
+        ))}
       </div>
       
-      <div className="calendar-grid">
-        {/* Week day headers */}
-        <div className="calendar-weekdays">
-          {weekDays.map((dayName) => (
-            <div key={dayName} className="calendar-weekday">
-              {dayName}
+      {/* Calendar days */}
+      <div className="grid grid-cols-7 gap-1">
+        {monthDays.map((date) => {
+          const dayEvents = getEventsForDate(date);
+          const isSelected = isSelectedDate(date);
+          
+          return (
+            <div
+              key={`${date.year}-${date.month}-${date.day}`}
+              className={`
+                p-2 h-20 border rounded cursor-pointer transition-colors
+                ${isSelected ? 'bg-blue-100 border-blue-500' : 'bg-white border-gray-200 hover:bg-gray-50'}
+                ${dayEvents.length > 0 ? 'border-green-300' : ''}
+              `}
+              onClick={() => onDateSelect(date)}
+            >
+              <div className="text-sm font-medium">{date.day}</div>
+              {dayEvents.length > 0 && (
+                <div className="text-xs text-green-600 mt-1">
+                  {dayEvents.length} رویداد
+                </div>
+              )}
             </div>
-          ))}
-        </div>
-
-        {/* Calendar days */}
-        <div className="calendar-days">
-          {/* Empty cells for days before month start */}
-          {Array.from({ length: monthData.startWeekDay }).map((_, index) => (
-            <div key={`empty-${index}`} className="calendar-day calendar-day-empty"></div>
-          ))}
-
-          {/* Days of the month */}
-          {Array.from({ length: monthData.daysInMonth }).map((_, index) => {
-            const day = index + 1;
-            const dayEvents = getDayEvents(day);
-            const dayClasses = [
-              'calendar-day',
-              isToday(day) ? 'calendar-day-today' : '',
-              isSelected(day) ? 'calendar-day-selected' : '',
-              dayEvents.length > 0 ? 'calendar-day-has-events' : ''
-            ].filter(Boolean).join(' ');
-
-            return (
-              <div
-                key={day}
-                className={dayClasses}
-                onClick={() => handleDateClick(day)}
-                onDoubleClick={() => handleDateDoubleClick(day)}
-              >
-                <div className="calendar-day-number">{day}</div>
-                
-                {/* Event indicators */}
-                {dayEvents.length > 0 && (
-                  <div className="calendar-day-events">
-                    {dayEvents.slice(0, 3).map((event, eventIndex) => (
-                      <div
-                        key={event.id}
-                        className={`calendar-event-indicator calendar-event-${event.type}`}
-                        title={event.title}
-                      >
-                        <span className="calendar-event-dot"></span>
-                        <span className="calendar-event-title">{event.title}</span>
-                      </div>
-                    ))}
-                    {dayEvents.length > 3 && (
-                      <div className="calendar-event-more">
-                        +{dayEvents.length - 3} بیشتر
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
+          );
+        })}
       </div>
     </div>
   );

@@ -1,252 +1,212 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Event, EventType } from './types';
+import React, { useState, useEffect } from 'react';
+import './App.css';
+
+// ایمپورت کامپوننت‌های تقویم
 import {
+  Calendar,
   CalendarHeader,
   CalendarNavigation,
   CalendarGrid,
-  CalendarSidebar
+  CalendarDay
 } from './components/Calendar';
-import {
-  Modal,
-  EventForm,
-  EventList,
-  Loading
-} from './components/Shared';
-import { PersianCalendar, getEventsForDate, sortEventsByDate } from './utils';
-import './styles/main.css';
+
+// ایمپورت کامپوننت‌های مشترک
+import { EventForm, EventList } from './components/Shared';
+
+// ایمپورت تایپ‌ها
+import { PersianDate, EventType, Event, EventFormData } from './types';
+
+// ایمپورت توابع کمکی
+import { gregorianToPersian, getMonthName } from './lib';
+
+// رنگ‌بندی انواع رویداد
+const eventTypeColors = {
+  [EventType.WORK]: '#3B82F6',
+  [EventType.PERSONAL]: '#10B981', 
+  [EventType.MEETING]: '#F59E0B',
+  [EventType.REMINDER]: '#8B5CF6',
+  [EventType.HOLIDAY]: '#EF4444'
+};
 
 function App() {
-  // State management
-  const [events, setEvents] = useState<Event[]>([]);
-  const [eventTypes, setEventTypes] = useState<EventType[]>([
-    { id: '1', name: 'کاری', color: '#3B82F6' },
-    { id: '2', name: 'شخصی', color: '#10B981' },
-    { id: '3', name: 'خانوادگی', color: '#F59E0B' },
-    { id: '4', name: 'دوستانه', color: '#8B5CF6' },
-    { id: '5', name: 'پزشکی', color: '#EF4444' }
-  ]);
-  
-  const [currentDate, setCurrentDate] = useState({ year: 0, month: 0, day: 0 });
-  const [selectedDate, setSelectedDate] = useState<{ year: number; month: number; day: number } | null>(null);
+  // State ها
+  const [currentDate, setCurrentDate] = useState<PersianDate>(() => {
+    const today = new Date();
+    return gregorianToPersian(today);
+  });
+
+  const [selectedDate, setSelectedDate] = useState<PersianDate | undefined>(undefined);
   const [viewMode, setViewMode] = useState<'month' | 'week' | 'day'>('month');
-  const [selectedEventTypes, setSelectedEventTypes] = useState<string[]>(eventTypes.map(t => t.id));
-  const [isLoading, setIsLoading] = useState(true);
-  const [showEventModal, setShowEventModal] = useState(false);
-  const [editingEvent, setEditingEvent] = useState<Event | null>(null);
-  const [showEventListModal, setShowEventListModal] = useState(false);
+  const [events, setEvents] = useState<Event[]>([]);
+  const [showEventForm, setShowEventForm] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<Event | undefined>(undefined);
+  const [selectedEventTypes, setSelectedEventTypes] = useState<EventType[]>(
+    Object.values(EventType)
+  );
 
-  const persianCalendar = new PersianCalendar();
-
-  // Initialize current date
-  useEffect(() => {
-    const today = persianCalendar.getCurrentDate();
-    setCurrentDate(today);
-    setSelectedDate(today);
-    
-    // Load events from localStorage
-    const savedEvents = localStorage.getItem('persian-calendar-events');
-    if (savedEvents) {
-      setEvents(JSON.parse(savedEvents));
-    }
-    
-    setIsLoading(false);
-  }, []);
-
-  // Save events to localStorage whenever they change
-  useEffect(() => {
-    if (events.length > 0 || !isLoading) {
-      localStorage.setItem('persian-calendar-events', JSON.stringify(events));
-    }
-  }, [events, isLoading]);
-
-  // Filter events based on selected types
-  const filteredEvents = useMemo(() => {
-    return events.filter(event => selectedEventTypes.includes(event.typeId));
-  }, [events, selectedEventTypes]);
-
-  // Get events for selected date
-  const selectedDateEvents = useMemo(() => {
-    if (!selectedDate) return [];
-    return getEventsForDate(filteredEvents, selectedDate);
-  }, [filteredEvents, selectedDate]);
-
-  // Handle month change
-  const handleMonthChange = (year: number, month: number) => {
-    setCurrentDate({ ...currentDate, year, month });
+  // فیلتر کردن رویدادها
+  const getFilteredEvents = () => {
+    return events.filter(event => 
+      selectedEventTypes.includes(event.type)
+    );
   };
 
-  // Handle today click
-  const handleTodayClick = () => {
-    const today = persianCalendar.getCurrentDate();
-    setCurrentDate(today);
-    setSelectedDate(today);
+  // رویدادهای امروز
+  const getTodayEvents = () => {
+    const today = gregorianToPersian(new Date());
+    return getFilteredEvents().filter(event => 
+      event.date.year === today.year &&
+      event.date.month === today.month &&
+      event.date.day === today.day
+    );
   };
 
-  // Handle date selection
-  const handleDateSelect = (date: { year: number; month: number; day: number }) => {
-    setSelectedDate(date);
-    if (viewMode === 'month') {
-      setShowEventListModal(true);
-    }
+  // رویدادهای ماه جاری
+  const getCurrentMonthEvents = () => {
+    return getFilteredEvents().filter(event => 
+      event.date.year === currentDate.year &&
+      event.date.month === currentDate.month
+    );
   };
 
-  // Handle event creation/update
-  const handleEventSubmit = (eventData: Omit<Event, 'id'>) => {
+  // تابع ذخیره رویداد - اصلاح شده برای EventForm
+  const handleSubmitEvent = (eventData: EventFormData) => {
     if (editingEvent) {
-      // Update existing event
-      setEvents(events.map(e => 
-        e.id === editingEvent.id 
+      // ویرایش رویداد موجود
+      setEvents(prev => prev.map(event => 
+        event.id === editingEvent.id 
           ? { ...eventData, id: editingEvent.id }
-          : e
+          : event
       ));
     } else {
-      // Create new event
+      // اضافه کردن رویداد جدید
       const newEvent: Event = {
         ...eventData,
         id: Date.now().toString()
       };
-      setEvents([...events, newEvent]);
+      setEvents(prev => [...prev, newEvent]);
     }
     
-    setShowEventModal(false);
-    setEditingEvent(null);
+    setShowEventForm(false);
+    setEditingEvent(undefined);
   };
 
-  // Handle event deletion
-  const handleEventDelete = (eventId: string) => {
-    setEvents(events.filter(e => e.id !== eventId));
+  // تابع حذف رویداد
+  const handleDeleteEvent = (eventId: string) => {
+    setEvents(prev => prev.filter(event => event.id !== eventId));
   };
 
-  // Handle event edit
-  const handleEventEdit = (event: Event) => {
+  // تابع ویرایش رویداد
+  const handleEditEvent = (event: Event) => {
     setEditingEvent(event);
-    setShowEventModal(true);
-    setShowEventListModal(false);
+    setShowEventForm(true);
   };
 
-  // Handle new event
-  const handleNewEvent = (date?: { year: number; month: number; day: number }) => {
-    if (date) {
-      setSelectedDate(date);
-    }
-    setEditingEvent(null);
-    setShowEventModal(true);
+  // تابع رفتن به ماه قبل
+  const handlePrevMonth = () => {
+    setCurrentDate(prev => {
+      if (prev.month === 1) {
+        return { year: prev.year - 1, month: 12, day: 1 };
+      }
+      return { ...prev, month: prev.month - 1 };
+    });
   };
 
-  // Handle event type toggle
-  const handleEventTypeToggle = (typeId: string) => {
-    setSelectedEventTypes(prev =>
-      prev.includes(typeId)
-        ? prev.filter(id => id !== typeId)
-        : [...prev, typeId]
-    );
+  // تابع رفتن به ماه بعد
+  const handleNextMonth = () => {
+    setCurrentDate(prev => {
+      if (prev.month === 12) {
+        return { year: prev.year + 1, month: 1, day: 1 };
+      }
+      return { ...prev, month: prev.month + 1 };
+    });
   };
 
-  if (isLoading) {
-    return <Loading fullScreen />;
-  }
+  // تابع رفتن به امروز
+  const handleTodayClick = () => {
+    const today = gregorianToPersian(new Date());
+    setCurrentDate(today);
+    setSelectedDate(today);
+  };
+
+  // تابع تغییر ماه
+  const handleMonthChange = (year: number, month: number) => {
+    setCurrentDate({ year, month, day: 1 });
+  };
+
+  // تابع انتخاب تاریخ
+  const handleDateSelect = (date: PersianDate) => {
+    setSelectedDate(date);
+  };
 
   return (
     <div className="app">
-      <CalendarHeader
-        currentView={viewMode}
-        onViewChange={setViewMode}
-        onNewEvent={() => handleNewEvent()}
-      />
-      
-      <div className="app-main">
-        <CalendarSidebar
-          selectedDate={selectedDate || undefined}
-          events={filteredEvents}
-          eventTypes={eventTypes}
-          selectedTypes={selectedEventTypes}
-          onTypeToggle={handleEventTypeToggle}
-          onQuickDateSelect={handleDateSelect}
+      <div className="main-content">
+        {/* هدر کلی */}
+        <CalendarHeader
+          year={currentDate.year}
+          month={currentDate.month}
+          monthLabel={getMonthName(currentDate.month as any)}
+          onPrevMonth={handlePrevMonth}
+          onNextMonth={handleNextMonth}
+          onToday={handleTodayClick}
         />
-        
-        <div className="app-content">
-          <CalendarNavigation
-            year={currentDate.year}
-            month={currentDate.month}
-            onMonthChange={handleMonthChange}
-            onTodayClick={handleTodayClick}
-          />
-          
-          {viewMode === 'month' && (
+
+        <div className="calendar-container">
+          <div className="calendar-main">
+            {/* ناوبری تقویم */}
+            <CalendarNavigation
+              currentMonth={currentDate}
+              onPrevMonth={handlePrevMonth}
+              onNextMonth={handleNextMonth}
+              onToday={handleTodayClick}
+            />
+
+            {/* شبکه تقویم - با onDateSelect prop */}
             <CalendarGrid
-              year={currentDate.year}
-              month={currentDate.month}
-              events={filteredEvents}
-              eventTypes={eventTypes}
+              currentDate={currentDate}
               selectedDate={selectedDate}
               onDateSelect={handleDateSelect}
-              onDateDoubleClick={handleNewEvent}
-              isLoading={false}
+              events={getCurrentMonthEvents()}
             />
-          )}
-          
-          {viewMode === 'week' && (
-            <div className="view-placeholder">
-              <p>نمای هفتگی در حال توسعه است...</p>
+          </div>
+
+          {/* ساید بار */}
+          <div className="calendar-sidebar">
+            <div className="sidebar-section">
+              <h3>رویدادهای امروز</h3>
+              {/* EventList - اصلاح props */}
+              <EventList
+                events={getTodayEvents()}
+                onEventEdit={handleEditEvent}
+                onEventDelete={handleDeleteEvent}
+              />
+              {getTodayEvents().length === 0 && (
+                <p className="empty-message">رویدادی برای امروز وجود ندارد</p>
+              )}
             </div>
-          )}
-          
-          {viewMode === 'day' && (
-            <div className="view-placeholder">
-              <p>نمای روزانه در حال توسعه است...</p>
-            </div>
-          )}
-        </div>
-      </div>
-      
-      {/* Event Form Modal */}
-      <Modal
-        isOpen={showEventModal}
-        onClose={() => {
-          setShowEventModal(false);
-          setEditingEvent(null);
-        }}
-        title={editingEvent ? 'ویرایش رویداد' : 'رویداد جدید'}
-      >
-        <EventForm
-          event={editingEvent}
-          eventTypes={eventTypes}
-          defaultDate={selectedDate || currentDate}
-          onSubmit={handleEventSubmit}
-          onCancel={() => {
-            setShowEventModal(false);
-            setEditingEvent(null);
-          }}
-        />
-      </Modal>
-      
-      {/* Event List Modal */}
-      <Modal
-        isOpen={showEventListModal}
-        onClose={() => setShowEventListModal(false)}
-        title={selectedDate ? `رویدادهای ${persianCalendar.formatDate(selectedDate.year, selectedDate.month, selectedDate.day)}` : ''}
-      >
-        <EventList
-          events={selectedDateEvents}
-          eventTypes={eventTypes}
-          onEdit={handleEventEdit}
-          onDelete={handleEventDelete}
-          emptyMessage="رویدادی برای این روز ثبت نشده است"
-        />
-        {selectedDate && (
-          <div className="modal-footer">
-            <button
-              className="btn btn-primary"
-              onClick={() => {
-                handleNewEvent(selectedDate);
-                setShowEventListModal(false);
-              }}
+
+            <button 
+              className="add-event-btn"
+              onClick={() => setShowEventForm(true)}
             >
-              افزودن رویداد جدید
+              + رویداد جدید
             </button>
           </div>
-        )}
-      </Modal>
+        </div>
+      </div>
+
+      {/* فرم رویداد - اصلاح props */}
+      {showEventForm && (
+        <EventForm
+          event={editingEvent}
+          onSubmit={handleSubmitEvent}
+          onCancel={() => {
+            setShowEventForm(false);
+            setEditingEvent(undefined);
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -1,5 +1,6 @@
-// Export all calendar components
 export { CalendarGrid } from './CalendarGrid';
-export { CalendarNavigation, CalendarNavigationCompact } from './CalendarNavigation';
-export { CalendarHeader } from './CalendarHeader';
 export { CalendarSidebar } from './CalendarSidebar';
+export { CalendarHeader } from './CalendarHeader';
+export { Calendar } from './Calendar';
+export { CalendarNavigation } from './CalendarNavigation';
+export { CalendarDay } from './CalendarDay';

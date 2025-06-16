@@ -1,82 +1,54 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Event, EventFormData, PersianDate } from '../types';
-import { EventsService } from '../services';
+import { useState } from 'react';
+import { Event, EventFormData, EventType } from '../types';
 
-export const useEvents = () => {
+export function useEvents() {
   const [events, setEvents] = useState<Event[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const loadEvents = () => {
-      try {
-        const loadedEvents = EventsService.getEvents();
-        setEvents(loadedEvents);
-      } catch (error) {
-        console.error('Error loading events:', error);
-      } finally {
-        setLoading(false);
-      }
+  const addEvent = (eventData: EventFormData) => {
+    const newEvent: Event = {
+      ...eventData,
+      id: Date.now().toString(),
+      type: eventData.category, // Use category as type for compatibility
     };
+    setEvents(prev => [...prev, newEvent]);
+  };
 
-    loadEvents();
-  }, []);
+  const updateEvent = (id: string, eventData: Partial<Event>) => {
+    setEvents(prev => prev.map(event => 
+      event.id === id ? { ...event, ...eventData } : event
+    ));
+  };
 
-  const addEvent = useCallback((eventData: EventFormData) => {
-    try {
-      const newEvent = EventsService.addEvent(eventData);
-      setEvents(prev => [...prev, newEvent]);
-      return newEvent;
-    } catch (error) {
-      console.error('Error adding event:', error);
-      throw error;
-    }
-  }, []);
+  const deleteEvent = (id: string) => {
+    setEvents(prev => prev.filter(event => event.id !== id));
+  };
 
-  const updateEvent = useCallback((id: string, eventData: Partial<EventFormData>) => {
-    try {
-      const updatedEvent = EventsService.updateEvent(id, eventData);
-      if (updatedEvent) {
-        setEvents(prev => 
-          prev.map(event => event.id === id ? updatedEvent : event)
-        );
-      }
-      return updatedEvent;
-    } catch (error) {
-      console.error('Error updating event:', error);
-      throw error;
-    }
-  }, []);
+  const getEventById = (id: string) => {
+    return events.find(event => event.id === id);
+  };
 
-  const deleteEvent = useCallback((id: string) => {
-    try {
-      const success = EventsService.deleteEvent(id);
-      if (success) {
-        setEvents(prev => prev.filter(event => event.id !== id));
-      }
-      return success;
-    } catch (error) {
-      console.error('Error deleting event:', error);
-      throw error;
-    }
-  }, []);
-
-  const getEventsForDate = useCallback((date: PersianDate) => {
-    return EventsService.getEventsForDate(date.year, date.month, date.day);
-  }, []);
-
-  const getEventsForMonth = useCallback((year: number, month: number) => {
+  const getEventsForDate = (year: number, month: number, day: number) => {
     return events.filter(event => 
-      event.date.year === year && event.date.month === month
+      event.date.year === year &&
+      event.date.month === month &&
+      event.date.day === day
     );
-  }, [events]);
+  };
+
+  const getEventsForMonth = (year: number, month: number) => {
+    return events.filter(event => 
+      event.date.year === year &&
+      event.date.month === month
+    );
+  };
 
   return {
     events,
-    loading,
     addEvent,
     updateEvent,
     deleteEvent,
+    getEventById,
     getEventsForDate,
-    getEventsForMonth
+    getEventsForMonth,
   };
-};
+}

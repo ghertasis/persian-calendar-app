@@ -1,117 +1,148 @@
-import { PersianDate } from '../types';
-
-export function gregorianToPersian(gregorianDate: Date): PersianDate {
-  const gYear = gregorianDate.getFullYear();
-  const gMonth = gregorianDate.getMonth() + 1;
-  const gDay = gregorianDate.getDate();
-  
-  // الگوریتم تبدیل میلادی به شمسی
-  let jYear: number;
-  let jMonth: number;
-  let jDay: number;
-  
-  const gDaysInMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-  const jDaysInMonth = [31, 31, 31, 31, 31, 31, 30, 30, 30, 30, 30, 29];
-  
-  if (gYear <= 1600) {
-    jYear = 0;
-    gYear -= 621;
-  } else {
-    jYear = 979;
-    gYear -= 1600;
-  }
-  
-  if (gMonth > 2) {
-    gYear++;
-  }
-  
-  const gDayNo = 365 * gYear + Math.floor((gYear + 3) / 4) - Math.floor((gYear + 99) / 100) + Math.floor((gYear + 399) / 400) - 80 + gDay + (gDaysInMonth.slice(0, gMonth - 1).reduce((a, b) => a + b, 0));
-  
-  jYear += 33 * Math.floor(gDayNo / 12053);
-  gDayNo = gDayNo % 12053;
-  
-  jYear += 4 * Math.floor(gDayNo / 1461);
-  gDayNo %= 1461;
-  
-  if (gDayNo > 365) {
-    jYear += Math.floor((gDayNo - 1) / 365);
-    gDayNo = (gDayNo - 1) % 365;
-  }
-  
-  let dayOfYear = gDayNo + 1;
-  
-  if (dayOfYear <= 186) {
-    jMonth = 1 + Math.floor(dayOfYear / 31);
-    jDay = 1 + (dayOfYear % 31);
-    if (jDay === 0) {
-      jMonth--;
-      jDay = 31;
-    }
-  } else {
-    jMonth = 7 + Math.floor((dayOfYear - 187) / 30);
-    jDay = 1 + ((dayOfYear - 187) % 30);
-    if (jDay === 0) {
-      jMonth--;
-      jDay = 30;
-    }
-  }
-  
-  return { year: jYear, month: jMonth, day: jDay };
-}
-
-export function persianToGregorian(persianDate: PersianDate): Date {
-  const { year: jYear, month: jMonth, day: jDay } = persianDate;
-  
-  let gYear: number;
-  let gMonth: number;
-  let gDay: number;
-  
-  if (jYear <= 979) {
-    gYear = 1600;
-    jYear += 621;
-  } else {
-    gYear = jYear + 1600;
-    jYear -= 979;
-  }
-  
-  let dayOfYear: number;
-  if (jMonth < 7) {
-    dayOfYear = (jMonth - 1) * 31 + jDay;
-  } else {
-    dayOfYear = 186 + (jMonth - 7) * 30 + jDay;
-  }
-  
-  const gDayNo = 365 * jYear + Math.floor(jYear / 33) * 8 + Math.floor(((jYear % 33) + 3) / 4) + 78 + dayOfYear;
-  
-  gYear += Math.floor(gDayNo / 365.25);
-  gDayNo = gDayNo % Math.floor(365.25 * gYear);
-  
-  const gDaysInMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-  
-  if (gYear % 4 === 0 && (gYear % 100 !== 0 || gYear % 400 === 0)) {
-    gDaysInMonth[1] = 29;
-  }
-  
-  gMonth = 1;
-  while (gMonth <= 12 && gDayNo > gDaysInMonth[gMonth - 1]) {
-    gDayNo -= gDaysInMonth[gMonth - 1];
-    gMonth++;
-  }
-  
-  gDay = gDayNo;
-  
-  return new Date(gYear, gMonth - 1, gDay);
-}
-
-export function getPersianMonthName(month: number): string {
-  const monthNames = [
-    'فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور',
-    'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'
+export function isLeapPersianYear(year: number): boolean {
+  const breaks = [
+    -61, 9, 38, 199, 426, 686, 756, 818, 1111, 1181, 1210,
+    1635, 2060, 2097, 2192, 2262, 2324, 2394, 2456, 3178
   ];
-  return monthNames[month - 1] || '';
+  
+  let gy = year + 1595;
+  let leap = -14;
+  let jp = breaks[0];
+  
+  let jump = 0;
+  for (let j = 1; j < breaks.length; j++) {
+    let jm = breaks[j];
+    jump = jm - jp;
+    if (year < jm) break;
+    leap += 683 * Math.floor(jump / 2816);
+    leap += 666 * Math.floor((jump % 2816) / 2134);
+    leap += 2 * Math.floor(((jump % 2816) % 2134) / 2);
+    jp = jm;
+  }
+  
+  let n = year - jp;
+  
+  if (n < jump) {
+    leap += 683 * Math.floor(n / 2816);
+    leap += 666 * Math.floor((n % 2816) / 2134);
+    leap += 2 * Math.floor(((n % 2816) % 2134) / 2);
+    
+    if ((jump % 2816) < 682) {
+      jump = jump % 2816;
+    } else {
+      jump = jump % 2816 + 2816;
+    }
+    
+    if ((n % 2816) >= jump) {
+      leap++;
+    }
+  }
+  
+  return (leap + 4) % 4 === 0;
 }
 
-export function getPersianDayName(dayOfWeek: number): string {
-  const dayNames = ['یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنج‌شنبه', 'جمعه', 'شنبه'];
-  return dayNames[dayOfWeek] || '';
+export function isLeapGregorianYear(year: number): boolean {
+  return (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
+}
+
+export function getDaysInGregorianMonth(year: number, month: number): number {
+  const daysInMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  if (month === 2 && isLeapGregorianYear(year)) {
+    return 29;
+  }
+  return daysInMonth[month - 1];
+}
+
+export function gregorianToPersian(gy: number, gm: number, gd: number): [number, number, number] {
+  let g_d_m = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
+  
+  let py: number, pm: number, pd: number;
+  let gy2: number; // Fix: Declare gy2 properly
+  
+  if (gy <= 1600) {
+    let jy = 0;
+    gy -= 621;
+  } else {
+    let jy = 979;
+    gy -= 1600;
+  }
+  
+  if (gm > 2) {
+    gy2 = gy + 1; // Fix: Remove 'let' since it's already declared
+  } else {
+    gy2 = gy; // Fix: Remove 'let' since it's already declared
+  }
+  
+  let days = (365 * gy) + Math.floor((gy2 + 3) / 4) + Math.floor((gy2 + 99) / 100) - Math.floor((gy2 + 399) / 400) - 80 + gd + g_d_m[gm - 1];
+  
+  py = -1029 + 33 * Math.floor(days / 12053);
+  days %= 12053;
+  
+  py += 4 * Math.floor(days / 1461);
+  days %= 1461;
+  
+  if (days > 365) {
+    py += Math.floor((days - 1) / 365);
+    days = (days - 1) % 365;
+  }
+  
+  if (days < 186) {
+    pm = 1 + Math.floor(days / 31);
+    pd = 1 + (days % 31);
+  } else {
+    pm = 7 + Math.floor((days - 186) / 30);
+    pd = 1 + ((days - 186) % 30);
+  }
+  
+  return [py, pm, pd];
+}
+
+export function persianToGregorian(py: number, pm: number, pd: number): [number, number, number] {
+  let gy: number, gm: number, gd: number;
+  
+  let epyear = py - 979;
+  let epday = 0;
+  
+  if (py >= 0) {
+    epyear = py - 979;
+  } else {
+    epyear = py - 978;
+  }
+  
+  if (pm <= 6) {
+    epday = (pm - 1) * 31 + pd;
+  } else {
+    epday = 6 * 31 + (pm - 7) * 30 + pd;
+  }
+  
+  let auxDay = Math.floor(epyear / 33) * 12053;
+  epyear %= 33;
+  
+  auxDay += Math.floor(epyear / 4) * 1461;
+  epyear %= 4;
+  
+  if (epyear >= 1) {
+    auxDay += (epyear - 1) * 365 + Math.floor(epyear / 4);
+  }
+  
+  auxDay += epday + 79;
+  
+  gy = 1600 + Math.floor(auxDay / 365.2425);
+  auxDay -= Math.floor((gy - 1600) * 365.2425);
+  
+  if (auxDay <= 0) {
+    gy--;
+    auxDay += isLeapGregorianYear(gy) ? 366 : 365;
+  }
+  
+  let monthDays = [31, isLeapGregorianYear(gy) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  
+  gm = 1;
+  while (gm <= 12 && auxDay > monthDays[gm - 1]) {
+    auxDay -= monthDays[gm - 1];
+    gm++;
+  }
+  
+  gd = auxDay;
+  
+  return [gy, gm, gd];
 }

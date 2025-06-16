@@ -1,81 +1,112 @@
-import { Event } from '../types';
+import { Event, EventType } from '../types';
 
-export class HolidaysService {
-  private static holidays: Event[] = [
+export interface Holiday extends Event {
+  date: {
+    year: number;
+    month: number;
+    day: number;
+  };
+}
+
+export class HolidayService {
+  private holidays: Holiday[] = [
     {
-      id: 'norooz-1',
-      title: 'عید نوروز',
+      id: 'nowruz-1',
+      title: 'جشن نوروز',
+      startTime: '00:00',
+      endTime: '23:59',
+      type: EventType.HOLIDAY,
+      category: EventType.HOLIDAY,
+      isImportant: true,
       date: { year: 1404, month: 1, day: 1 },
-      type: 'holiday',
-      isImportant: true
     },
     {
-      id: 'norooz-2',
-      title: 'عید نوروز',
+      id: 'nowruz-2',
+      title: 'تعطیلات نوروز',
+      startTime: '00:00',
+      endTime: '23:59',
+      type: EventType.HOLIDAY,
+      category: EventType.HOLIDAY,
+      isImportant: true,
       date: { year: 1404, month: 1, day: 2 },
-      type: 'holiday',
-      isImportant: true
     },
     {
-      id: 'norooz-3',
-      title: 'عید نوروز',
+      id: 'nowruz-3',
+      title: 'تعطیلات نوروز',
+      startTime: '00:00',
+      endTime: '23:59',
+      type: EventType.HOLIDAY,
+      category: EventType.HOLIDAY,
+      isImportant: true,
       date: { year: 1404, month: 1, day: 3 },
-      type: 'holiday',
-      isImportant: true
     },
     {
-      id: 'norooz-4',
-      title: 'عید نوروز',
+      id: 'nowruz-4',
+      title: 'تعطیلات نوروز',
+      startTime: '00:00',
+      endTime: '23:59',
+      type: EventType.HOLIDAY,
+      category: EventType.HOLIDAY,
+      isImportant: true,
       date: { year: 1404, month: 1, day: 4 },
-      type: 'holiday',
-      isImportant: true
     },
     {
       id: 'sizdah-bedar',
       title: 'سیزده بدر',
+      startTime: '00:00',
+      endTime: '23:59',
+      type: EventType.HOLIDAY,
+      category: EventType.HOLIDAY,
+      isImportant: true,
       date: { year: 1404, month: 1, day: 13 },
-      type: 'holiday',
-      isImportant: true
     },
     {
-      id: 'death-khomeini',
-      title: 'رحلت امام خمینی',
+      id: 'imam-ali-death',
+      title: 'شهادت حضرت علی',
+      startTime: '00:00',
+      endTime: '23:59',
+      type: EventType.HOLIDAY,
+      category: EventType.HOLIDAY,
+      isImportant: true,
       date: { year: 1404, month: 3, day: 14 },
-      type: 'holiday',
-      isImportant: true
     },
     {
-      id: '15-khordad',
-      title: 'قیام ۱۵ خرداد',
+      id: 'besat',
+      title: 'مبعث رسول اکرم',
+      startTime: '00:00',
+      endTime: '23:59',
+      type: EventType.HOLIDAY,
+      category: EventType.HOLIDAY,
+      isImportant: true,
       date: { year: 1404, month: 3, day: 15 },
-      type: 'holiday',
-      isImportant: true
     }
   ];
 
-  static getHolidaysForYear(year: number): Event[] {
+  getHolidaysForYear(year: number): Holiday[] {
     return this.holidays.filter(holiday => holiday.date.year === year);
   }
 
-  static getHolidaysForMonth(year: number, month: number): Event[] {
+  getHolidaysForMonth(year: number, month: number): Holiday[] {
     return this.holidays.filter(holiday => 
       holiday.date.year === year && holiday.date.month === month
     );
   }
 
-  static isHoliday(year: number, month: number, day: number): boolean {
-    return this.holidays.some(holiday =>
+  isHoliday(year: number, month: number, day: number): boolean {
+    return this.holidays.some(holiday => 
       holiday.date.year === year &&
       holiday.date.month === month &&
       holiday.date.day === day
     );
   }
 
-  static getHolidayForDate(year: number, month: number, day: number): Event | null {
-    return this.holidays.find(holiday =>
+  getHoliday(year: number, month: number, day: number): Holiday | undefined {
+    return this.holidays.find(holiday => 
       holiday.date.year === year &&
       holiday.date.month === month &&
       holiday.date.day === day
-    ) || null;
+    );
   }
 }
+
+export const holidayService = new HolidayService();

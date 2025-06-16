@@ -1,49 +1,26 @@
-// components/Calendar/CalendarMonth.tsx
 import React from 'react';
-import { CalendarMonth as CalendarMonthType, CalendarDay, Event } from '../../types';
-import { CalendarWeek } from './CalendarWeek';
+import { CalendarDay } from "./CalendarDay"; // Changed from default import
+import { Event, PersianDate } from '../../types';
 
 interface CalendarMonthProps {
-  month: CalendarMonthType;
+  currentDate: PersianDate;
   events: Event[];
-  selectedDate?: CalendarDay;
-  onDayClick: (day: CalendarDay) => void;
+  selectedDate?: PersianDate;
+  onDateSelect: (date: PersianDate) => void;
   onEventClick?: (event: Event) => void;
 }
 
 export const CalendarMonth: React.FC<CalendarMonthProps> = ({
-  month,
+  currentDate,
   events,
   selectedDate,
-  onDayClick,
+  onDateSelect,
   onEventClick
 }) => {
-  const weekDays = ['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج'];
-
+  // Implementation for month view
   return (
     <div className="calendar-month">
-      {/* هدر روزهای هفته */}
-      <div className="calendar-header">
-        {weekDays.map(day => (
-          <div key={day} className="week-day-header">
-            {day}
-          </div>
-        ))}
-      </div>
-      
-      {/* هفته‌های ماه */}
-      <div className="calendar-body">
-        {month.weeks.map((week, index) => (
-          <CalendarWeek
-            key={index}
-            week={week}
-            events={events}
-            selectedDate={selectedDate}
-            onDayClick={onDayClick}
-            onEventClick={onEventClick}
-          />
-        ))}
-      </div>
+      {/* Month calendar implementation */}
     </div>
   );
 };
