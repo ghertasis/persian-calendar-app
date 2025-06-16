@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import './App.css';
+import './styles/main.css'; // تغییر مسیر از './App.css' به './styles/main.css'
 
 // ایمپورت کامپوننت‌های تقویم
 import {
@@ -141,57 +141,62 @@ function App() {
 
   return (
     <div className="app">
-      <div className="main-content">
-        {/* هدر کلی */}
-        <CalendarHeader
-          year={currentDate.year}
-          month={currentDate.month}
-          monthLabel={getMonthName(currentDate.month as any)}
-          onPrevMonth={handlePrevMonth}
-          onNextMonth={handleNextMonth}
-          onToday={handleTodayClick}
-        />
+      <div className="app-main">
+        <div className="app-content">
+          {/* هدر کلی */}
+          <CalendarHeader
+            year={currentDate.year}
+            month={currentDate.month}
+            monthLabel={getMonthName(currentDate.month as any)}
+            onPrevMonth={handlePrevMonth}
+            onNextMonth={handleNextMonth}
+            onToday={handleTodayClick}
+          />
 
-        <div className="calendar-container">
-          <div className="calendar-main">
-            {/* ناوبری تقویم */}
-            <CalendarNavigation
-              currentMonth={currentDate}
-              onPrevMonth={handlePrevMonth}
-              onNextMonth={handleNextMonth}
-              onToday={handleTodayClick}
-            />
-
-            {/* شبکه تقویم - با onDateSelect prop */}
-            <CalendarGrid
-              currentDate={currentDate}
-              selectedDate={selectedDate}
-              onDateSelect={handleDateSelect}
-              events={getCurrentMonthEvents()}
-            />
-          </div>
-
-          {/* ساید بار */}
-          <div className="calendar-sidebar">
-            <div className="sidebar-section">
-              <h3>رویدادهای امروز</h3>
-              {/* EventList - اصلاح props */}
-              <EventList
-                events={getTodayEvents()}
-                onEventEdit={handleEditEvent}
-                onEventDelete={handleDeleteEvent}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '2rem', marginTop: '2rem' }}>
+            <div style={{ background: 'var(--surface)', borderRadius: '8px', boxShadow: 'var(--shadow)', overflow: 'hidden' }}>
+              {/* ناوبری تقویم */}
+              <CalendarNavigation
+                currentMonth={currentDate}
+                onPrevMonth={handlePrevMonth}
+                onNextMonth={handleNextMonth}
+                onToday={handleTodayClick}
               />
-              {getTodayEvents().length === 0 && (
-                <p className="empty-message">رویدادی برای امروز وجود ندارد</p>
-              )}
+
+              {/* شبکه تقویم - با onDateSelect prop */}
+              <CalendarGrid
+                currentDate={currentDate}
+                selectedDate={selectedDate}
+                onDateSelect={handleDateSelect}
+                events={getCurrentMonthEvents()}
+              />
             </div>
 
-            <button 
-              className="add-event-btn"
-              onClick={() => setShowEventForm(true)}
-            >
-              + رویداد جدید
-            </button>
+            {/* ساید بار */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              <div style={{ background: 'var(--surface)', borderRadius: '8px', padding: '1.5rem', boxShadow: 'var(--shadow)' }}>
+                <h3 className="mb-3">رویدادهای امروز</h3>
+                {/* EventList - اصلاح props */}
+                <EventList
+                  events={getTodayEvents()}
+                  onEventEdit={handleEditEvent}
+                  onEventDelete={handleDeleteEvent}
+                />
+                {getTodayEvents().length === 0 && (
+                  <p className="text-center" style={{ color: 'var(--text-secondary)', fontStyle: 'italic', padding: '2rem' }}>
+                    رویدادی برای امروز وجود ندارد
+                  </p>
+                )}
+              </div>
+
+              <button 
+                className="btn btn-success"
+                onClick={() => setShowEventForm(true)}
+                style={{ padding: '1rem', fontSize: '1rem' }}
+              >
+                + رویداد جدید
+              </button>
+            </div>
           </div>
         </div>
       </div>
